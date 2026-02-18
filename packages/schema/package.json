@@ -1,0 +1,31 @@
+{
+  "name": "@ai-ext/schema",
+  "version": "0.1.0",
+  "description": "Canonical DSL types, JSON Schema definitions, and validation for ai-ext",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun run generate-declarations",
+    "generate-declarations": "tsc --emitDeclarationOnly",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "files": ["dist", "schemas"],
+  "dependencies": {
+    "ajv": "^8.17.0",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.7.0"
+  }
+}

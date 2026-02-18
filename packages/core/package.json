@@ -1,0 +1,32 @@
+{
+  "name": "@ai-ext/core",
+  "version": "0.1.0",
+  "description": "Extension loader, parser, and intermediate representation for ai-ext",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --target node && bun run generate-declarations",
+    "generate-declarations": "tsc --emitDeclarationOnly",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@ai-ext/schema": "workspace:*",
+    "yaml": "^2.7.0",
+    "glob": "^11.0.0",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "typescript": "^5.7.0"
+  }
+}

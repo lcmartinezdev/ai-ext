@@ -1,0 +1,12 @@
+name: example-extension
+version: 0.1.0
+description: Example ai-ext extension demonstrating skills, agents, hooks, tools, and policies
+author: ai-ext
+license: MIT
+
+skills: ./skills/
+agents: ./agents/
+hooks: ./hooks/
+tools: ./tools/
+policies: ./policies/
+rules: ./rules/

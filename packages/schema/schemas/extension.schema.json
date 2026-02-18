@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-ext.dev/schemas/extension.schema.json",
+  "title": "ai-ext Extension Manifest",
+  "description": "Canonical extension manifest (extension.yaml) for the Universal AI Agent Extension Platform",
+  "type": "object",
+  "required": ["name", "version", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "maxLength": 64,
+      "description": "Extension name (lowercase, hyphens allowed)"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+",
+      "description": "Semantic version (e.g., 1.0.0)"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Human-readable description"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author name or organization"
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier"
+    },
+    "skills": {
+      "type": "string",
+      "description": "Glob or directory path to skill definitions"
+    },
+    "agents": {
+      "type": "string",
+      "description": "Glob or directory path to agent definitions"
+    },
+    "hooks": {
+      "type": "string",
+      "description": "Glob or directory path to hook definitions"
+    },
+    "tools": {
+      "type": "string",
+      "description": "Glob or directory path to tool definitions"
+    },
+    "policies": {
+      "type": "string",
+      "description": "Glob or directory path to policy definitions"
+    },
+    "rules": {
+      "type": "string",
+      "description": "Glob or directory path to rule markdown files"
+    }
+  },
+  "additionalProperties": false
+}

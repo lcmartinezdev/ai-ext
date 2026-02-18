@@ -1,0 +1,20 @@
+{
+  "name": "ai-ext",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Universal AI Agent Extension Platform — portable skills, agents, hooks, and tools across AI coding environments",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "clean": "bun run --filter '*' clean"
+  },
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
