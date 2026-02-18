@@ -274,25 +274,14 @@ bun packages/cli/src/cli.ts <command>
 
 ## Roadmap
 
-### Phase 1 (Current)
-- [x] Canonical DSL specification
-- [x] Extension loader, parser, validator
-- [x] Compiler with Claude Code, KiloCode, OpenCode targets
-- [x] Runtime MCP server with tool routing, hook emulation, memory
-- [x] CLI (`init`, `validate`, `build`, `serve`)
-- [x] Example extension
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the full roadmap.
 
-### Phase 2
-- [ ] `ai-ext dev` watch mode
-- [ ] Unit and e2e test suite
-- [ ] Hook engine: `prompt` and `agent` handler types
-- [ ] Memory layer: vector storage
-- [ ] Sub-agent orchestration engine
-
-### Phase 3
-- [ ] Extension registry and package distribution
-- [ ] Versioned extension marketplace
-- [ ] Additional host targets (Cursor, Windsurf, Continue.dev)
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **Phase 1** | Foundation — DSL, compiler, runtime, CLI | Complete |
+| **Phase 2** | Hardening — tests, dev experience, hook engine, memory, orchestration | Next |
+| **Phase 3** | Ecosystem — registry, marketplace, Cursor/Windsurf/Continue.dev targets | Planned |
+| **Phase 4** | Enterprise — managed policies, audit logging, IDE integration | Future |
 
 ## License
 
