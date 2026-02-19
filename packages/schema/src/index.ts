@@ -67,6 +67,8 @@ export {
   validateHook,
   validateTool,
   validatePolicy,
+  needsYamlQuotes,
+  ensureYamlQuotes,
 } from "./validator.js";
 
 export type { ValidationResult, ValidationError } from "./validator.js";

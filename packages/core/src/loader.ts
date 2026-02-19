@@ -8,11 +8,12 @@
  * - rules/*.md (plain markdown)
  */
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { join, resolve, dirname, basename } from "node:path";
 import { parse as parseYaml } from "yaml";
 import matter from "gray-matter";
 import type { ExtensionManifest } from "@ai-ext/schema";
+import { needsYamlQuotes, ensureYamlQuotes } from "@ai-ext/schema";
 
 // ---------------------------------------------------------------------------
 // Frontmatter Parsing
@@ -28,12 +29,58 @@ export interface ParsedComponent<T = Record<string, unknown>> {
 }
 
 /**
+ * Fix YAML descriptions that need quoting in raw frontmatter.
+ * This scans the raw frontmatter for unquoted descriptions and adds quotes.
+ */
+function fixYamlDescriptionsInFrontmatter(
+  rawContent: string
+): string {
+  // Match description: value (where value is not quoted)
+  // This regex finds description fields that aren't already quoted
+  const descriptionPattern = /^(description:\s*)(\S.*)$/gm;
+
+  const result = rawContent.replace(
+    descriptionPattern,
+    (match, prefix, value) => {
+      // Skip if already quoted
+      if (value.trim().startsWith('"') || value.trim().startsWith("'")) {
+        return match;
+      }
+
+      // Check if this description needs quotes
+      if (needsYamlQuotes(value)) {
+        const fixedValue = ensureYamlQuotes(value);
+        return `${prefix}${fixedValue}`;
+      }
+
+      return match;
+    }
+  );
+
+  return result;
+}
+
+/**
  * Parse a markdown file with YAML frontmatter.
  * Returns the parsed frontmatter and the markdown body.
  */
-export function parseMarkdownFile(filePath: string): ParsedComponent {
-  const raw = readFileSync(filePath, "utf-8");
-  const { data, content } = matter(raw);
+export function parseMarkdownFile(
+  filePath: string,
+  options?: { fixYamlDescriptions?: boolean }
+): ParsedComponent {
+  let raw = readFileSync(filePath, "utf-8");
+  let contentToParse = raw;
+
+  // Auto-fix YAML descriptions if enabled
+  if (options?.fixYamlDescriptions) {
+    const fixed = fixYamlDescriptionsInFrontmatter(raw);
+    if (fixed !== raw) {
+      writeFileSync(filePath, fixed, "utf-8");
+      contentToParse = fixed;
+    }
+  }
+
+  const { data, content } = matter(contentToParse);
 
   return {
     frontmatter: data as Record<string, unknown>,

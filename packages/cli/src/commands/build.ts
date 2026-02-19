@@ -2,7 +2,7 @@
  * ai-ext build — Compile an extension for a target host
  */
 
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
 import type { TargetHost, BuildOptions } from "@ai-ext/schema";
 import { compile, getSupportedTargets } from "@ai-ext/compiler";
 
@@ -17,6 +17,8 @@ export interface BuildCommandOptions {
   verbose?: boolean;
   /** Dry run */
   dryRun?: boolean;
+  /** Auto-fix YAML description issues */
+  fix?: boolean;
 }
 
 export function buildExtension(options: BuildCommandOptions): void {
@@ -44,12 +46,17 @@ export function buildExtension(options: BuildCommandOptions): void {
         outDir: options.outDir ? resolve(options.outDir) : undefined,
         verbose: options.verbose,
         dryRun: options.dryRun,
+        fixYamlDescriptions: options.fix,
       };
 
       const result = compile(buildOptions);
 
       // Report results
+      const outputPath = options.outDir
+        ? resolve(options.outDir)
+        : join(sourceDir, "dist", target);
       const fileCount = result.files.size;
+      console.log(`  Output: ${outputPath}`);
       console.log(`  Generated ${fileCount} file(s)`);
 
       if (options.verbose || options.dryRun) {

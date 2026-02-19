@@ -401,6 +401,8 @@ export interface BuildOptions {
   verbose?: boolean;
   /** Dry run — show what would be generated without writing */
   dryRun?: boolean;
+  /** Auto-fix YAML description issues */
+  fixYamlDescriptions?: boolean;
 }
 
 /** Result of a compilation */

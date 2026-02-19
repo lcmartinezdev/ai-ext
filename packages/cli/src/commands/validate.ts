@@ -10,6 +10,8 @@ export interface ValidateCommandOptions {
   dir: string;
   /** Verbose logging */
   verbose?: boolean;
+  /** Auto-fix YAML description issues */
+  fix?: boolean;
 }
 
 export function validateExtension(options: ValidateCommandOptions): void {
@@ -18,7 +20,9 @@ export function validateExtension(options: ValidateCommandOptions): void {
   console.log(`Validating extension at ${dir}...`);
 
   try {
-    const { ir, errors, valid } = resolveExtension(dir);
+    const { ir, errors, valid } = resolveExtension(dir, {
+      fixYamlDescriptions: options.fix,
+    });
 
     // Summary
     console.log(`\n  Components found:`);

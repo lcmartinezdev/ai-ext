@@ -7,7 +7,7 @@
  *   extension.yaml → discover components → parse each → validate → IR
  */
 
-import { resolve } from "node:path";
+import { resolve, basename, dirname } from "node:path";
 import type {
   ExtensionIR,
   ExtensionManifest,
@@ -72,11 +72,16 @@ export interface ResolveError {
  * Resolve an extension directory into a fully populated IR.
  *
  * @param extensionDir - Directory containing extension.yaml
+ * @param options - Resolution options
  * @returns Resolved IR with validation results
  */
-export function resolveExtension(extensionDir: string): ResolveResult {
+export function resolveExtension(
+  extensionDir: string,
+  options?: { fixYamlDescriptions?: boolean }
+): ResolveResult {
   const dir = resolve(extensionDir);
   const errors: ResolveError[] = [];
+  const fixYaml = options?.fixYamlDescriptions ?? false;
 
   // 1. Load manifest
   const manifest = loadManifest(dir);
@@ -88,8 +93,21 @@ export function resolveExtension(extensionDir: string): ResolveResult {
   const skills: SkillDefinition[] = [];
   for (const file of skillFiles) {
     try {
-      const parsed = parseMarkdownFile(file);
+      const parsed = parseMarkdownFile(file, { fixYamlDescriptions: fixYaml });
       const skill = parseSkill(parsed);
+
+      // Validate name matches directory (KiloCode requirement)
+      const skillDir = dirname(file);
+      const skillNameFromPath = basename(skillDir);
+      if (skillNameFromPath !== skill.metadata.name) {
+        errors.push({
+          component: "skill",
+          file,
+          message: `Skill name "${skill.metadata.name}" does not match directory name "${skillNameFromPath}". In KiloCode, the name field must match the parent directory name.`,
+          severity: "warning",
+        });
+      }
+
       const validation = validateSkill({
         ...skill.metadata,
         invocation: skill.invocation,
@@ -113,7 +131,7 @@ export function resolveExtension(extensionDir: string): ResolveResult {
   const agents: AgentDefinition[] = [];
   for (const file of agentFiles) {
     try {
-      const parsed = parseMarkdownFile(file);
+      const parsed = parseMarkdownFile(file, { fixYamlDescriptions: fixYaml });
       const agent = parseAgent(parsed);
       const validation = validateAgent({
         ...agent.metadata,
@@ -138,7 +156,7 @@ export function resolveExtension(extensionDir: string): ResolveResult {
   const hooks: HookDefinition[] = [];
   for (const file of hookFiles) {
     try {
-      const parsed = parseMarkdownFile(file);
+      const parsed = parseMarkdownFile(file, { fixYamlDescriptions: fixYaml });
       const hook = parseHook(parsed);
       const validation = validateHook({
         ...hook.metadata,
@@ -163,7 +181,7 @@ export function resolveExtension(extensionDir: string): ResolveResult {
   const tools: ToolDefinition[] = [];
   for (const file of toolFiles) {
     try {
-      const parsed = parseMarkdownFile(file);
+      const parsed = parseMarkdownFile(file, { fixYamlDescriptions: fixYaml });
       const tool = parseTool(parsed);
       const validation = validateTool({
         ...tool.metadata,
@@ -187,7 +205,7 @@ export function resolveExtension(extensionDir: string): ResolveResult {
   const policies: PolicyDefinition[] = [];
   for (const file of policyFiles) {
     try {
-      const parsed = parseMarkdownFile(file);
+      const parsed = parseMarkdownFile(file, { fixYamlDescriptions: fixYaml });
       const policy = parsePolicy(parsed);
       const validation = validatePolicy({
         ...policy.metadata,

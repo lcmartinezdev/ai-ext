@@ -4,10 +4,8 @@
  * Generates:
  *   .kilocodemodes            ← from agents (mapped to Custom Modes)
  *   .kilocode/skills/<name>/SKILL.md  ← from skills
- *   .kilocode/rules/<name>.md ← from rules
- *   .kilocode/workflows/<name>.md  ← from skills (user-invocable → workflows)
+ *   .kilocode/rules/<name>.md ← from rules (auto-loaded by KiloCode)
  *   .kilocode/mcp.json        ← from tools (MCP exposure) + runtime bridge
- *   AGENTS.md                 ← from rules (project-level instructions)
  *
  * Key adaptations:
  *   - Agents → Custom Modes (slug, roleDefinition, groups)
@@ -48,15 +46,13 @@ export class KiloCodeTarget implements CompilationTarget {
     const runtimeRequirements: RuntimeRequirement[] = [];
 
     // 1. Emit skills → .kilocode/skills/<name>/SKILL.md
+    //    Skills and workflows are distinct concepts in KiloCode:
+    //    - Skills (.kilocode/skills/) are on-demand behavioral contracts loaded by the LLM
+    //    - Workflows (.kilocode/workflows/) are step-by-step procedures invoked via /slash-command
+    //    We only emit skills here. Workflows would require a separate canonical component.
     for (const skill of ir.skills) {
       const path = `.kilocode/skills/${skill.metadata.name}/SKILL.md`;
       files.set(path, this.emitSkill(skill));
-
-      // Also emit user-invocable skills as workflows
-      if (skill.invocation?.userInvocable !== false) {
-        const wfPath = `.kilocode/workflows/${skill.metadata.name}.md`;
-        files.set(wfPath, this.emitWorkflow(skill));
-      }
     }
 
     // 2. Emit agents → .kilocodemodes (Custom Modes YAML)
@@ -65,17 +61,11 @@ export class KiloCodeTarget implements CompilationTarget {
       files.set(".kilocodemodes", this.emitModes(modes));
     }
 
-    // 3. Emit rules → .kilocode/rules/<name>.md + AGENTS.md
-    const agentsMdParts: string[] = [];
+    // 3. Emit rules → .kilocode/rules/<name>.md
+    //    Rules go into .kilocode/rules/ which KiloCode auto-loads.
+    //    We do NOT generate a root AGENTS.md — the project may already have one.
     for (const [name, content] of ir.rules) {
       files.set(`.kilocode/rules/${name}`, content);
-      agentsMdParts.push(content);
-    }
-    if (agentsMdParts.length > 0) {
-      files.set(
-        "AGENTS.md",
-        `# ${ir.manifest.name}\n\n${ir.manifest.description}\n\n${agentsMdParts.join("\n\n---\n\n")}`
-      );
     }
 
     // 4. Hooks → KiloCode has NO native hook support
@@ -133,23 +123,49 @@ export class KiloCodeTarget implements CompilationTarget {
       description: skill.metadata.description,
     };
 
+    // Emit license if present
     if (skill.metadata.license) fm.license = skill.metadata.license;
+
+    // Emit compatibility if present
     if (skill.metadata.compatibility) fm.compatibility = skill.metadata.compatibility;
+
+    // Emit metadata if present
     if (skill.metadata.metadata) fm.metadata = skill.metadata.metadata;
+
+    // Emit tags if present
+    if (skill.metadata.tags) fm.tags = skill.metadata.tags;
+
+    // Emit allowed-tools (space-delimited per Agent Skills spec)
     if (skill.tools?.allowed) {
       fm["allowed-tools"] = skill.tools.allowed.join(" ");
     }
 
+    // Emit invocation fields
+    if (skill.invocation) {
+      if (skill.invocation.argumentHint) {
+        // Quote the argument-hint value since it may contain special chars like []
+        fm["argument-hint"] = skill.invocation.argumentHint;
+      }
+      if (skill.invocation.userInvocable !== undefined) {
+        fm["user-invocable"] = skill.invocation.userInvocable;
+      }
+      // Emit disable-model-invocation (inverted from modelInvocable)
+      if (skill.invocation.modelInvocable !== undefined) {
+        fm["disable-model-invocation"] = !skill.invocation.modelInvocable;
+      }
+    }
+
+    // Emit context fields (mode, agent, model)
+    if (skill.context) {
+      if (skill.context.mode) fm.context = skill.context.mode;
+      if (skill.context.agent) fm.agent = skill.context.agent;
+      if (skill.context.model) fm.model = skill.context.model;
+    }
+
+    // Emit resources if present
+    if (skill.resources) fm.resources = skill.resources;
+
     return this.renderMarkdownWithFrontmatter(fm, skill.instructions);
-  }
-
-  // -------------------------------------------------------------------------
-  // Workflow Emitter (skill → slash command)
-  // -------------------------------------------------------------------------
-
-  private emitWorkflow(skill: SkillDefinition): string {
-    // KiloCode workflows are plain markdown (no frontmatter)
-    return `# ${skill.metadata.name}\n\n${skill.metadata.description}\n\n${skill.instructions}\n`;
   }
 
   // -------------------------------------------------------------------------
@@ -336,7 +352,21 @@ export class KiloCodeTarget implements CompilationTarget {
     const yaml = Object.entries(frontmatter)
       .filter(([_, v]) => v !== undefined)
       .map(([k, v]) => {
-        if (typeof v === "string") return `${k}: ${v}`;
+        if (typeof v === "string") {
+          // Quote strings that contain special YAML characters or could be misinterpreted
+          // (e.g., arrays like [foo], booleans like true/false, numbers)
+          const needsQuoting =
+            /^[\[\]{}|>&*!%@`$]/.test(v) || // starts with special char
+            /\s$/.test(v) || // ends with whitespace
+            v === "true" ||
+            v === "false" ||
+            v === "yes" ||
+            v === "no" ||
+            v === "null" ||
+            v === "~" ||
+            /^\d+(\.\d+)?$/.test(v); // looks like a number
+          return `${k}: ${needsQuoting ? `"${v}"` : v}`;
+        }
         if (typeof v === "boolean" || typeof v === "number") return `${k}: ${v}`;
         return `${k}: ${JSON.stringify(v)}`;
       })

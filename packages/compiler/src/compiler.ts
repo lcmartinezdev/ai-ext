@@ -52,7 +52,7 @@ export function getTarget(name: TargetHost): CompilationTarget | undefined {
  * @returns Build result with generated files, warnings, and runtime requirements
  */
 export function compile(options: BuildOptions): BuildResult {
-  const { target: targetName, sourceDir, outDir, verbose, dryRun } = options;
+  const { target: targetName, sourceDir, outDir, verbose, dryRun, fixYamlDescriptions } = options;
 
   // 1. Validate target
   const target = targets[targetName];
@@ -63,7 +63,7 @@ export function compile(options: BuildOptions): BuildResult {
   }
 
   // 2. Resolve extension to IR
-  const { ir, errors, valid } = resolveExtension(sourceDir);
+  const { ir, errors, valid } = resolveExtension(sourceDir, { fixYamlDescriptions });
 
   if (!valid) {
     const errorMessages = errors
@@ -85,8 +85,11 @@ export function compile(options: BuildOptions): BuildResult {
   const result = target.compile(ir);
 
   // 4. Write output files (unless dry run)
+  //    Default output goes to dist/<target>/ so the user gets a self-contained
+  //    folder they can copy into their project root.
+  //    --out-dir overrides this entirely.
   if (!dryRun) {
-    const outputBase = outDir || sourceDir;
+    const outputBase = outDir || join(sourceDir, "dist", targetName);
 
     for (const [relativePath, content] of result.files) {
       const fullPath = join(outputBase, relativePath);

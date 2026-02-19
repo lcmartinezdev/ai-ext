@@ -2,12 +2,12 @@
  * @ai-ext/compiler — Claude Code Target
  *
  * Generates:
- *   .claude/settings.json      ← from policies + hooks
- *   .claude/skills/<name>/SKILL.md  ← from skills
- *   .claude/agents/<name>.md   ← from agents
- *   .claude/rules/<name>.md    ← from rules
- *   .mcp.json                  ← from tools (MCP exposure) + runtime bridge
- *   CLAUDE.md                  ← from rules (project-level instructions)
+ *   .claude/settings.json             ← from policies + hooks
+ *   .claude/skills/<name>/SKILL.md   ← from skills
+ *   .claude/agents/<name>.md         ← from agents
+ *   .claude/rules/<name>.md          ← from rules
+ *   .claude/rules/_ai-ext-index.md   ← index with @imports for all rules
+ *   .mcp.json                        ← from tools (MCP exposure) + runtime bridge
  */
 
 import type { CompilationTarget, TargetOutput } from "./target.js";
@@ -44,16 +44,23 @@ export class ClaudeTarget implements CompilationTarget {
       files.set(path, this.emitAgent(agent));
     }
 
-    // 3. Emit rules → .claude/rules/<name>.md + CLAUDE.md
-    const claudeMdParts: string[] = [];
+    // 3. Emit rules → .claude/rules/<name>.md
+    //    Rules go into .claude/rules/ which Claude Code auto-loads.
+    //    We do NOT generate a root CLAUDE.md — the project may already have one.
+    //    Instead, we generate a .claude/rules/_ai-ext.md that uses @imports
+    //    so the user can reference it from their own CLAUDE.md if desired.
+    const ruleNames: string[] = [];
     for (const [name, content] of ir.rules) {
       files.set(`.claude/rules/${name}`, content);
-      claudeMdParts.push(content);
+      ruleNames.push(name);
     }
-    if (claudeMdParts.length > 0) {
+    if (ruleNames.length > 0) {
+      const importLines = ruleNames
+        .map((name) => `@.claude/rules/${name}`)
+        .join("\n");
       files.set(
-        "CLAUDE.md",
-        `# ${ir.manifest.name}\n\n${ir.manifest.description}\n\n${claudeMdParts.join("\n\n---\n\n")}`
+        ".claude/rules/_ai-ext-index.md",
+        `# ${ir.manifest.name}\n\n${ir.manifest.description}\n\n${importLines}\n`
       );
     }
 

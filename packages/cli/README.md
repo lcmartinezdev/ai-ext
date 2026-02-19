@@ -46,9 +46,12 @@ Loads and validates an extension without generating any output.
 ai-ext validate                      # Validate current directory
 ai-ext validate -d ./my-extension    # Validate specific directory
 ai-ext validate -v                   # Verbose output
+ai-ext validate --fix               # Auto-fix YAML description issues
 ```
 
 Reports component counts, errors, and warnings.
+
+The `--fix` flag will automatically quote descriptions that contain YAML-special characters (like `"`, `:`, `#`, etc.) to ensure they parse correctly.
 
 ### `ai-ext build`
 

@@ -4,11 +4,10 @@
  * Generates:
  *   .opencode/skills/<name>/SKILL.md  ← from skills
  *   .opencode/agents/<name>.md        ← from agents
- *   .opencode/commands/<name>.md      ← from skills (user-invocable → commands)
+ *   .opencode/rules/<name>.md         ← from rules (referenced via opencode.json instructions)
  *   .opencode/plugins/ai-ext-hooks.ts ← from hooks (plugin-based hook binding)
  *   .opencode/tools/<name>.ts         ← from tools (native tool definitions)
- *   opencode.json                     ← from tools (MCP), agents, policies
- *   AGENTS.md                         ← from rules
+ *   opencode.json                     ← from tools (MCP), hooks (plugins), rules (instructions)
  */
 
 import type { CompilationTarget, TargetOutput } from "./target.js";
@@ -33,15 +32,13 @@ export class OpenCodeTarget implements CompilationTarget {
     const runtimeRequirements: RuntimeRequirement[] = [];
 
     // 1. Emit skills → .opencode/skills/<name>/SKILL.md
+    //    Skills and commands are distinct concepts in OpenCode:
+    //    - Skills (.opencode/skills/) are on-demand behavioral contracts loaded by the LLM
+    //    - Commands (.opencode/commands/) are prompt templates invoked via /slash-command
+    //    We only emit skills here. Commands would require a separate canonical component.
     for (const skill of ir.skills) {
       const path = `.opencode/skills/${skill.metadata.name}/SKILL.md`;
       files.set(path, this.emitSkill(skill));
-
-      // Also emit user-invocable skills as commands
-      if (skill.invocation?.userInvocable !== false) {
-        const cmdPath = `.opencode/commands/${skill.metadata.name}.md`;
-        files.set(cmdPath, this.emitCommand(skill));
-      }
     }
 
     // 2. Emit agents → .opencode/agents/<name>.md
@@ -50,16 +47,14 @@ export class OpenCodeTarget implements CompilationTarget {
       files.set(path, this.emitAgent(agent));
     }
 
-    // 3. Emit rules → AGENTS.md
-    const agentsMdParts: string[] = [];
+    // 3. Emit rules → .opencode/rules/<name>.md
+    //    We do NOT generate a root AGENTS.md — the project may already have one.
+    //    Rules go into .opencode/rules/ and are referenced via the
+    //    "instructions" field in opencode.json.
+    const ruleNames: string[] = [];
     for (const [name, content] of ir.rules) {
-      agentsMdParts.push(content);
-    }
-    if (agentsMdParts.length > 0) {
-      files.set(
-        "AGENTS.md",
-        `# ${ir.manifest.name}\n\n${ir.manifest.description}\n\n${agentsMdParts.join("\n\n---\n\n")}`
-      );
+      files.set(`.opencode/rules/${name}`, content);
+      ruleNames.push(name);
     }
 
     // 4. Emit hooks → .opencode/plugins/ai-ext-hooks.ts
@@ -77,8 +72,8 @@ export class OpenCodeTarget implements CompilationTarget {
       files.set(path, this.emitNativeTool(tool));
     }
 
-    // 6. Build opencode.json
-    const config = this.buildConfig(ir, runtimeRequirements);
+    // 6. Build opencode.json (with instructions referencing rule files)
+    const config = this.buildConfig(ir, runtimeRequirements, ruleNames);
     files.set("opencode.json", JSON.stringify(config, null, 2));
 
     // 7. Emit policies as rule files
@@ -113,28 +108,6 @@ export class OpenCodeTarget implements CompilationTarget {
     if (skill.metadata.metadata) fm.metadata = skill.metadata.metadata;
     if (skill.tools?.allowed) {
       fm["allowed-tools"] = skill.tools.allowed.join(" ");
-    }
-
-    return this.renderMarkdownWithFrontmatter(fm, skill.instructions);
-  }
-
-  // -------------------------------------------------------------------------
-  // Command Emitter (skill → slash command)
-  // -------------------------------------------------------------------------
-
-  private emitCommand(skill: SkillDefinition): string {
-    const fm: Record<string, unknown> = {
-      description: skill.metadata.description,
-    };
-
-    if (skill.context?.agent) {
-      fm.agent = skill.context.agent;
-    }
-    if (skill.context?.model) {
-      fm.model = skill.context.model;
-    }
-    if (skill.context?.mode === "fork") {
-      fm.subtask = true;
     }
 
     return this.renderMarkdownWithFrontmatter(fm, skill.instructions);
@@ -336,11 +309,17 @@ export class OpenCodeTarget implements CompilationTarget {
 
   private buildConfig(
     ir: ExtensionIR,
-    runtimeReqs: RuntimeRequirement[]
+    runtimeReqs: RuntimeRequirement[],
+    ruleNames: string[]
   ): Record<string, unknown> {
     const config: Record<string, unknown> = {
       $schema: "https://opencode.ai/config.json",
     };
+
+    // Instructions: reference rule files in .opencode/rules/
+    if (ruleNames.length > 0) {
+      config.instructions = ruleNames.map((name) => `.opencode/rules/${name}`);
+    }
 
     // MCP servers for tools
     const mcpTools = ir.tools.filter((t) => t.exposure?.mcp !== false);

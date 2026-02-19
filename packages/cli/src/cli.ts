@@ -59,8 +59,9 @@ program
   .description("Validate an extension without compiling")
   .option("-d, --dir <path>", "Extension directory", ".")
   .option("-v, --verbose", "Verbose output")
+  .option("-f, --fix", "Auto-fix YAML description issues")
   .action((opts) => {
-    validateExtension({ dir: opts.dir, verbose: opts.verbose });
+    validateExtension({ dir: opts.dir, verbose: opts.verbose, fix: opts.fix });
   });
 
 // -------------------------------------------------------------------------
@@ -75,9 +76,10 @@ program
     "Target host(s): claude, kilocode, opencode"
   )
   .option("-d, --dir <path>", "Extension source directory", ".")
-  .option("-o, --out-dir <path>", "Output directory (default: source dir)")
+  .option("-o, --out-dir <path>", "Output directory (default: <source>/dist/<target>/)")
   .option("-v, --verbose", "Verbose output")
   .option("--dry-run", "Show what would be generated without writing")
+  .option("--fix", "Auto-fix YAML description issues")
   .action((opts) => {
     buildExtension({
       target: opts.target,
@@ -85,6 +87,7 @@ program
       outDir: opts.outDir,
       verbose: opts.verbose,
       dryRun: opts.dryRun,
+      fix: opts.fix,
     });
   });
 

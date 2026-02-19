@@ -84,6 +84,67 @@ const NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
 const MAX_NAME_LENGTH = 64;
 const MAX_DESCRIPTION_LENGTH = 1024;
 
+// YAML-special characters that require quoting
+const YAML_SPECIAL_CHARS = /["':\#\[\]\{\}\|\>\*\!\%\@]/;
+// Patterns that indicate description needs quoting
+const YAML_UNQUOTED_PATTERNS = [
+  /^\s*[-|+|>|*|!|%|$|@]/,  // Starts with block indicator
+  /^\s*\d+(\.\d+)?$/,       // Looks like a number
+  /^(true|false|null|yes|no|on|off)$/i, // YAML boolean/null literals
+];
+
+// ---------------------------------------------------------------------------
+// YAML-Safe Description Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if a description string needs to be quoted for YAML safety.
+ * Returns true if the description contains special characters or patterns
+ * that could be misinterpreted by YAML parsers.
+ */
+export function needsYamlQuotes(description: string): boolean {
+  if (!description || typeof description !== "string") {
+    return false;
+  }
+
+  const trimmed = description.trim();
+
+  // Check for YAML-special characters
+  if (YAML_SPECIAL_CHARS.test(trimmed)) {
+    return true;
+  }
+
+  // Check for patterns that could be misinterpreted
+  for (const pattern of YAML_UNQUOTED_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Ensure a description is safe for YAML by wrapping it in quotes.
+ * Escapes any existing quotes within the string.
+ */
+export function ensureYamlQuotes(description: string): string {
+  if (!description || typeof description !== "string") {
+    return description;
+  }
+
+  // If already quoted, return as-is
+  const trimmed = description.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return description;
+  }
+
+  // Escape existing double quotes and wrap in double quotes
+  const escaped = trimmed.replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
